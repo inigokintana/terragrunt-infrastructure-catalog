@@ -1,0 +1,51 @@
+#cloud-config
+version: 2
+hostname: ${cluster_name}-vm
+fqdn: ${cluster_name}-vm.local
+
+# Update apt cache
+package_update: true
+package_upgrade: true
+
+# Install packages
+packages:
+  - curl
+  - wget
+  - snapd
+  - linux-modules-extra-generic
+
+# Snap configuration for Microk8s
+snap:
+  packages:
+    - name: microk8s
+      classic: true
+      channel: "latest/stable"
+
+# DNS configuration
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: true
+      nameservers:
+        addresses: [${dns_servers}]
+
+# System configuration
+runcmd:
+  - sleep 10
+  - usermod -a -G microk8s ubuntu
+  - microk8s status --wait-ready
+  - echo "Microk8s installation complete"
+
+# Set root password
+chpasswd:
+  expire: false
+
+write_files:
+  - path: /tmp/microk8s-init.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Microk8s post-setup script
+      sudo microk8s enable dns storage ingress
+      echo "Microk8s cluster initialized"

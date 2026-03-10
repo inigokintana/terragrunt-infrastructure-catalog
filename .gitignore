@@ -1,0 +1,21 @@
+# Terraform files
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+.DS_Store
+
+# Terragrunt files
+.terragrunt-cache/
+.terragrunt-stack/
+
+# IDEs
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+
+# Environment variables
+.env
+.env.local

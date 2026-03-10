@@ -1,0 +1,74 @@
+name: Catalog - Release
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'modules/**'
+  #     - 'units/**'
+  #     - 'stacks/**'
+  workflow_run:
+    workflows: ["Catalog - Validate & Test"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Determine version
+        id: version
+        run: |
+          # Get latest tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "Latest tag: $LATEST_TAG"
+          
+          # Increment patch version (simple semantic versioning)
+          CURRENT_VERSION=${LATEST_TAG#v}
+          MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+          MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
+          PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          release_name: Release ${{ steps.version.outputs.version }}
+          body: |
+            ## Catalog Release ${{ steps.version.outputs.version }}
+            
+            ### Changes
+            - Updated modules and units
+            - New stack configurations
+            
+            ### Usage
+            Reference this version in infrastructure-live repos:
+            ```hcl
+            values = {
+              version = "${{ steps.version.outputs.version }}"
+            }
+            ```
+          draft: false
+          prerelease: false
+      
+      - name: Notify Release
+        run: |
+          echo "## 🎉 Catalog Released" >> $GITHUB_STEP_SUMMARY
+          echo "Version: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "Infrastructure-live repos can now reference this version" >> $GITHUB_STEP_SUMMARY

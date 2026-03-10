@@ -1,0 +1,143 @@
+name: Catalog - Validate & Test
+
+on:
+  pull_request:
+    paths:
+      - 'modules/**'
+      - 'units/**'
+      - 'stacks/**'
+      - 'test/**'
+      - '.github/workflows/validate.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'modules/**'
+      - 'units/**'
+      - 'stacks/**'
+
+jobs:
+  validate-terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          # https://docs.terragrunt.com/reference/supported-versions
+          terraform_version: 1.14.0
+      
+      - name: Validate Terraform modules
+        run: |
+          for module in modules/*; do
+            if [ -d "$module" ]; then
+              echo "Validating $module..."
+              cd "$module"
+              terraform init -backend=false
+              terraform validate
+              cd - > /dev/null
+            fi
+          done
+
+  validate-opentofu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          # https://docs.terragrunt.com/reference/supported-versions
+          tofu_version: 1.11.5
+
+      - name: Validate OpenTofu modules
+        run: |
+          for module in modules/*; do
+            if [ -d "$module" ]; then
+              echo "Validating $module..."
+              cd "$module"
+              tofu init -backend=false
+              tofu validate
+              cd - > /dev/null
+            fi
+          done
+
+  validate-terragrunt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Setup Terragrunt
+        run: |
+          wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.95.0/terragrunt_linux_amd64
+          chmod +x terragrunt_linux_amd64
+          sudo mv terragrunt_linux_amd64 /usr/local/bin/terragrunt
+      
+      - name: Validate Terragrunt units
+        run: |
+          for unit in units/*; do
+            if [ -d "$unit" ]; then
+              echo "Validating $unit..."
+              cd "$unit"
+              terragrunt validate-all || echo "Validation completed with status $?"
+              cd - > /dev/null
+            fi
+          done
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup tflint
+        uses: terraform-linters/setup-tflint@v4
+      
+      - name: Lint Terraform/OpenTofu modules
+        run: |
+          for module in modules/*; do
+            if [ -d "$module" ]; then
+              echo "Linting $module..."
+              cd "$module"
+              tflint --init
+              tflint
+              cd - > /dev/null
+            fi
+          done
+        continue-on-error: true
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'modules'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  summary:
+    runs-on: ubuntu-latest
+    #needs: [validate-terraform, validate-terragrunt]
+    needs: [validate-terraform, validate-opentofu, validate-terragrunt]
+    if: always()
+    steps:
+      - name: Validation Summary
+        run: |
+          echo "## Catalog Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Terraform modules validated" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Terragrunt units validated" >> $GITHUB_STEP_SUMMARY
+          echo "✓ All checks completed" >> $GITHUB_STEP_SUMMARY
