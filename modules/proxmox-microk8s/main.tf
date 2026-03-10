@@ -49,7 +49,7 @@ resource "proxmox_vm_qemu" "microk8s" {
   }
   
   network {
-    id       = 0
+    #id       = 0
     model    = "virtio"
     bridge   = var.bridge_name
   }
