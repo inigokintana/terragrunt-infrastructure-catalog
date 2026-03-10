@@ -3,10 +3,10 @@ include "root" {
 }
 
 terraform {
-  #source = "git::https://github.com/inigokintana/terragrunt-infrastructure-catalog.git//modules/aws-eks?ref=${values.version}"
+  source = "git::https://github.com/inigokintana/terragrunt-infrastructure-catalog.git//modules/aws-eks?ref=${values.version}"
   #source = "${get_repo_root()}/terragrunt-infrastructure-catalog/modules/aws-eks"
   #source = "../../terragrunt-infrastructure-catalog/modules/aws-eks"
-  source = "/home/inigokintana/IaC-SovereignCloudAI/terragrunt-infrastructure-catalog/modules/aws-eks"
+  #source = "/home/inigokintana/IaC-SovereignCloudAI/terragrunt-infrastructure-catalog/modules/aws-eks"
 
 }
 

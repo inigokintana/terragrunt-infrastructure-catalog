@@ -1,22 +1,22 @@
-# terraform {
-#   required_version = ">= 1.0"
-#   required_providers {
-#     proxmox = {
-#       source  = "Telmate/proxmox"
-#       version = "~> 2.9"
-#     }
-#   }
-# }
-
-#https://search.opentofu.org/provider/bpg/proxmox/latest
 terraform {
+  required_version = ">= 1.0"
   required_providers {
     proxmox = {
-      source = "bpg/proxmox"
-      version = "0.98.1"
+      source  = "Telmate/proxmox"
+      version = "~> 2.9"
     }
   }
 }
+
+#https://search.opentofu.org/provider/bpg/proxmox/latest Better manteined provider
+# terraform {
+#   required_providers {
+#     proxmox = {
+#       source = "bpg/proxmox"
+#       version = "0.98.1"
+#     }
+#   }
+# }
 
 # Cloud-init script for Microk8s deployment
 locals {
@@ -77,6 +77,30 @@ resource "proxmox_vm_qemu" "microk8s" {
     var.tags != {} ? join(";", [for k, v in var.tags : "${k}=${v}"]) : ""
   ])
 }
+
+#bpg/proxmox provider
+# resource "proxmox_virtual_environment_vm" "microk8s" {
+#   name      = "microk8s"
+#   node_name = "your-node"
+
+#   cpu {
+#     cores = 2
+#   }
+
+#   memory {
+#     dedicated = 2048
+#   }
+
+#   disk {
+#     datastore_id = "local-lvm"
+#     size         = 20
+#     interface    = "virtio0"
+#   }
+
+#   network_device {
+#     bridge = "vmbr0"
+#   }
+# }
 
 # Wait for VMs to be ready
 resource "time_sleep" "wait_for_vms" {
